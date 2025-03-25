@@ -30,6 +30,10 @@ export class SagemakerConstructCDK extends constructs.Construct {
     pipelineJSON = pipelineJSON.replace(
       'arn:aws:iam::123456789102:role/VoC-ModelsAlphaStage-VoC--SagemakerExecutionRole4EB-zqTMV6PAYRmN',
       sagemakerRole.roleArn
+    );
+    pipelineJSON = pipelineJSON.replace(
+      'arn:aws:iam::123456789102:role/VoC-ModelsAlphaStage-VoC--SagemakerExecutionRole4EB-zqTMV6PAYRmN',
+      sagemakerRole.roleArn
     );    
     const pipeline1 = new sagemaker.CfnPipeline(this, 'pipeline', {
       roleArn: sagemakerRole.roleArn,
