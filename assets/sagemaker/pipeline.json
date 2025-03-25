@@ -1,0 +1,456 @@
+{
+    "Version": "2020-12-01",
+    "Metadata": {},
+    "Parameters": [
+        {
+            "Name": "InputData",
+            "Type": "String",
+            "DefaultValue": "s3://genai-bucket/genai/input/data.csv"
+        },
+        {
+            "Name": "OutputData",
+            "Type": "String",
+            "DefaultValue": "s3://genai-bucket/genai/output"
+        },
+        {
+            "Name": "DataInfo",
+            "Type": "String",
+            "DefaultValue": "s3://genai-bucket/genai/output/new_data_info.json"
+        },
+        {
+            "Name": "CuratedData",
+            "Type": "String",
+            "DefaultValue": "s3://genai-bucket/genai/output/curated_table.csv"
+        },
+        {
+            "Name": "MappingData",
+            "Type": "String",
+            "DefaultValue": "s3://genai-bucket/genai/output/similar_questions_mapping.csv"
+        },
+        {
+            "Name": "HistoricalCuratedData",
+            "Type": "String",
+            "DefaultValue": "s3://genai-bucket/genai/output/historical_curated.csv"
+        },
+        {
+            "Name": "HistoricalMappingData",
+            "Type": "String",
+            "DefaultValue": "s3://genai-bucket/genai/output/historical_mapping.csv"
+        },
+        {
+            "Name": "HistoricalData",
+            "Type": "String",
+            "DefaultValue": "s3://genai-bucket/genai/output/historical_data.csv"
+        },
+        {
+            "Name": "TopicGroundTruth",
+            "Type": "String",
+            "DefaultValue": "s3://genai-bucket/genai/input/topic_ground_truth_history.csv"
+        }
+    ],
+    "PipelineExperimentConfig": {
+        "ExperimentName": {
+            "Get": "Execution.PipelineName"
+        },
+        "TrialName": {
+            "Get": "Execution.PipelineExecutionId"
+        }
+    },
+    "Steps": [
+        {
+            "Name": "PreprocessingStep",
+            "Type": "Processing",
+            "Arguments": {
+                "ProcessingResources": {
+                    "ClusterConfig": {
+                        "InstanceType": "ml.m5.large",
+                        "InstanceCount": 1,
+                        "VolumeSizeInGB": 30
+                    }
+                },
+                "AppSpecification": {
+                    "ImageUri": "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3",
+                    "ContainerArguments": [
+                        "--input-path",
+                        "/opt/ml/processing/input",
+                        "--output-path",
+                        "/opt/ml/processing/output",
+                        "--new-data-info-path",
+                        "/opt/ml/processing/new_data_info"
+                    ],
+                    "ContainerEntrypoint": [
+                        "python3",
+                        "/opt/ml/processing/input/code/preprocessing_script.py"
+                    ]
+                },
+                "RoleArn": "arn:aws:iam::123456789102:role/VoC-ModelsAlphaStage-VoC--SagemakerExecutionRole4EB-zqTMV6PAYRmN",
+                "ProcessingInputs": [
+                    {
+                        "InputName": "input-1",
+                        "AppManaged": false,
+                        "S3Input": {
+                            "S3Uri": {
+                                "Get": "Parameters.InputData"
+                            },
+                            "LocalPath": "/opt/ml/processing/input",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3CompressionType": "None"
+                        }
+                    },
+                    {
+                        "InputName": "code",
+                        "AppManaged": false,
+                        "S3Input": {
+                            "S3Uri": "s3://sagemaker-us-east-1-123456789102/PreprocessingStep-f5070e5bb8cfce97b5fc3077e13500eb5a58b6d762c7863cdee8110cbe9a7eb9/input/code/preprocessing_script.py",
+                            "LocalPath": "/opt/ml/processing/input/code",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3CompressionType": "None"
+                        }
+                    }
+                ],
+                "ProcessingOutputConfig": {
+                    "Outputs": [
+                        {
+                            "OutputName": "new_data",
+                            "AppManaged": false,
+                            "S3Output": {
+                                "S3Uri": {
+                                    "Get": "Parameters.OutputData"
+                                },
+                                "LocalPath": "/opt/ml/processing/output",
+                                "S3UploadMode": "EndOfJob"
+                            }
+                        },
+                        {
+                            "OutputName": "historical_curated",
+                            "AppManaged": false,
+                            "S3Output": {
+                                "S3Uri": {
+                                    "Get": "Parameters.HistoricalCuratedData"
+                                },
+                                "LocalPath": "/opt/ml/processing/historical_curated",
+                                "S3UploadMode": "EndOfJob"
+                            }
+                        },
+                        {
+                            "OutputName": "historical_mapping",
+                            "AppManaged": false,
+                            "S3Output": {
+                                "S3Uri": {
+                                    "Get": "Parameters.HistoricalMappingData"
+                                },
+                                "LocalPath": "/opt/ml/processing/historical_mapping",
+                                "S3UploadMode": "EndOfJob"
+                            }
+                        },
+                        {
+                            "OutputName": "historical_data",
+                            "AppManaged": false,
+                            "S3Output": {
+                                "S3Uri": {
+                                    "Get": "Parameters.HistoricalData"
+                                },
+                                "LocalPath": "/opt/ml/processing/historical_data",
+                                "S3UploadMode": "EndOfJob"
+                            }
+                        }
+                    ]
+                }
+            },
+            "PropertyFiles": [
+                {
+                    "PropertyFileName": "NewDataInfoProperty",
+                    "OutputName": "new_data",
+                    "FilePath": "new_data_info.json"
+                }
+            ]
+        },
+        {
+            "Name": "CheckNewDataExists",
+            "Type": "Condition",
+            "Arguments": {
+                "Conditions": [
+                    {
+                        "Type": "Equals",
+                        "LeftValue": {
+                            "Std:JsonGet": {
+                                "PropertyFile": {
+                                    "Get": "Steps.PreprocessingStep.PropertyFiles.NewDataInfoProperty"
+                                },
+                                "Path": "has_new_data"
+                            }
+                        },
+                        "RightValue": true
+                    }
+                ],
+                "IfSteps": [
+                    {
+                        "Name": "genaiAnalysisStep",
+                        "Type": "Processing",
+                        "Arguments": {
+                            "ProcessingResources": {
+                                "ClusterConfig": {
+                                    "InstanceType": "ml.m5.large",
+                                    "InstanceCount": 1,
+                                    "VolumeSizeInGB": 30
+                                }
+                            },
+                            "AppSpecification": {
+                                "ImageUri": "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3",
+                                "ContainerArguments": [
+                                    "--input-path",
+                                    "/opt/ml/processing/input",
+                                    "--output-path",
+                                    "/opt/ml/processing/curated_data",
+                                    "--run-date",
+                                    {
+                                        "Std:JsonGet": {
+                                            "PropertyFile": {
+                                                "Get": "Steps.PreprocessingStep.PropertyFiles.NewDataInfoProperty"
+                                            },
+                                            "Path": "run_date"
+                                        }
+                                    }
+                                ],
+                                "ContainerEntrypoint": [
+                                    "python3",
+                                    "/opt/ml/processing/input/code/genai_analysis_script.py"
+                                ]
+                            },
+                            "RoleArn": "arn:aws:iam::123456789102:role/VoC-ModelsAlphaStage-VoC--SagemakerExecutionRole4EB-zqTMV6PAYRmN",
+                            "ProcessingInputs": [
+                                {
+                                    "InputName": "input-1",
+                                    "AppManaged": false,
+                                    "S3Input": {
+                                        "S3Uri": {
+                                            "Get": "Steps.PreprocessingStep.ProcessingOutputConfig.Outputs[\'new_data\'].S3Output.S3Uri"
+                                        },
+                                        "LocalPath": "/opt/ml/processing/input",
+                                        "S3DataType": "S3Prefix",
+                                        "S3InputMode": "File",
+                                        "S3DataDistributionType": "FullyReplicated",
+                                        "S3CompressionType": "None"
+                                    }
+                                },
+                                {
+                                    "InputName": "code",
+                                    "AppManaged": false,
+                                    "S3Input": {
+                                        "S3Uri": "s3://sagemaker-us-east-1-123456789102/genaiAnalysisStep-5c0683975da44900896f4ceb450effc4dbc734cfefc862ad9a422747e25dc377/input/code/genai_analysis_script.py",
+                                        "LocalPath": "/opt/ml/processing/input/code",
+                                        "S3DataType": "S3Prefix",
+                                        "S3InputMode": "File",
+                                        "S3DataDistributionType": "FullyReplicated",
+                                        "S3CompressionType": "None"
+                                    }
+                                }
+                            ],
+                            "ProcessingOutputConfig": {
+                                "Outputs": [
+                                    {
+                                        "OutputName": "genai_output",
+                                        "AppManaged": false,
+                                        "S3Output": {
+                                            "S3Uri": {
+                                                "Get": "Parameters.OutputData"
+                                            },
+                                            "LocalPath": "/opt/ml/processing/curated_data",
+                                            "S3UploadMode": "EndOfJob"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "Name": "TopicGenerationStep",
+                        "Type": "Processing",
+                        "Arguments": {
+                            "ProcessingResources": {
+                                "ClusterConfig": {
+                                    "InstanceType": "ml.m5.large",
+                                    "InstanceCount": 1,
+                                    "VolumeSizeInGB": 30
+                                }
+                            },
+                            "AppSpecification": {
+                                "ImageUri": "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3",
+                                "ContainerArguments": [
+                                    "--input-path",
+                                    "/opt/ml/processing/input",
+                                    "--output-path",
+                                    "/opt/ml/processing/output",
+                                    "--curated-path",
+                                    "/opt/ml/processing/curated_data",
+                                    "--topic-ground-truth-path",
+                                    "/opt/ml/processing/ground_truth"
+                                ],
+                                "ContainerEntrypoint": [
+                                    "python3",
+                                    "/opt/ml/processing/input/code/topic_generation_script.py"
+                                ]
+                            },
+                            "RoleArn": "arn:aws:iam::123456789102:role/VoC-ModelsAlphaStage-VoC--SagemakerExecutionRole4EB-zqTMV6PAYRmN",
+                            "ProcessingInputs": [
+                                {
+                                    "InputName": "input-1",
+                                    "AppManaged": false,
+                                    "S3Input": {
+                                        "S3Uri": {
+                                            "Get": "Steps.PreprocessingStep.ProcessingOutputConfig.Outputs[\'new_data\'].S3Output.S3Uri"
+                                        },
+                                        "LocalPath": "/opt/ml/processing/input",
+                                        "S3DataType": "S3Prefix",
+                                        "S3InputMode": "File",
+                                        "S3DataDistributionType": "FullyReplicated",
+                                        "S3CompressionType": "None"
+                                    }
+                                },
+                                {
+                                    "InputName": "input-2",
+                                    "AppManaged": false,
+                                    "S3Input": {
+                                        "S3Uri": {
+                                            "Get": "Steps.genaiAnalysisStep.ProcessingOutputConfig.Outputs[\'genai_output\'].S3Output.S3Uri"
+                                        },
+                                        "LocalPath": "/opt/ml/processing/curated_data",
+                                        "S3DataType": "S3Prefix",
+                                        "S3InputMode": "File",
+                                        "S3DataDistributionType": "FullyReplicated",
+                                        "S3CompressionType": "None"
+                                    }
+                                },
+                                {
+                                    "InputName": "input-3",
+                                    "AppManaged": false,
+                                    "S3Input": {
+                                        "S3Uri": {
+                                            "Get": "Parameters.TopicGroundTruth"
+                                        },
+                                        "LocalPath": "/opt/ml/processing/ground_truth",
+                                        "S3DataType": "S3Prefix",
+                                        "S3InputMode": "File",
+                                        "S3DataDistributionType": "FullyReplicated",
+                                        "S3CompressionType": "None"
+                                    }
+                                },
+                                {
+                                    "InputName": "code",
+                                    "AppManaged": false,
+                                    "S3Input": {
+                                        "S3Uri": "s3://sagemaker-us-east-1-123456789102/TopicGenerationStep-daf79efc12413ac375fea7da17cadacf7caecfc93d5cdd3c1ec1ce00c7027465/input/code/topic_generation_script.py",
+                                        "LocalPath": "/opt/ml/processing/input/code",
+                                        "S3DataType": "S3Prefix",
+                                        "S3InputMode": "File",
+                                        "S3DataDistributionType": "FullyReplicated",
+                                        "S3CompressionType": "None"
+                                    }
+                                }
+                            ],
+                            "ProcessingOutputConfig": {
+                                "Outputs": [
+                                    {
+                                        "OutputName": "topics",
+                                        "AppManaged": false,
+                                        "S3Output": {
+                                            "S3Uri": {
+                                                "Get": "Parameters.OutputData"
+                                            },
+                                            "LocalPath": "/opt/ml/processing/output",
+                                            "S3UploadMode": "EndOfJob"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "Name": "SimilarQuestionsMapping",
+                        "Type": "Processing",
+                        "Arguments": {
+                            "ProcessingResources": {
+                                "ClusterConfig": {
+                                    "InstanceType": "ml.m5.large",
+                                    "InstanceCount": 1,
+                                    "VolumeSizeInGB": 30
+                                }
+                            },
+                            "AppSpecification": {
+                                "ImageUri": "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3",
+                                "ContainerArguments": [
+                                    "--input-path",
+                                    "/opt/ml/processing/input",
+                                    "--output-path",
+                                    "/opt/ml/processing/output",
+                                    "--run-date",
+                                    {
+                                        "Std:JsonGet": {
+                                            "PropertyFile": {
+                                                "Get": "Steps.PreprocessingStep.PropertyFiles.NewDataInfoProperty"
+                                            },
+                                            "Path": "run_date"
+                                        }
+                                    }
+                                ],
+                                "ContainerEntrypoint": [
+                                    "python3",
+                                    "/opt/ml/processing/input/code/similar_questions_script.py"
+                                ]
+                            },
+                            "RoleArn": "arn:aws:iam::123456789102:role/VoC-ModelsAlphaStage-VoC--SagemakerExecutionRole4EB-zqTMV6PAYRmN",
+                            "ProcessingInputs": [
+                                {
+                                    "InputName": "input-1",
+                                    "AppManaged": false,
+                                    "S3Input": {
+                                        "S3Uri": {
+                                            "Get": "Steps.PreprocessingStep.ProcessingOutputConfig.Outputs[\'new_data\'].S3Output.S3Uri"
+                                        },
+                                        "LocalPath": "/opt/ml/processing/input",
+                                        "S3DataType": "S3Prefix",
+                                        "S3InputMode": "File",
+                                        "S3DataDistributionType": "FullyReplicated",
+                                        "S3CompressionType": "None"
+                                    }
+                                },
+                                {
+                                    "InputName": "code",
+                                    "AppManaged": false,
+                                    "S3Input": {
+                                        "S3Uri": "s3://sagemaker-us-east-1-123456789102/SimilarQuestionsMapping-7b89cfe67aa3bd6676f6facbc727566a89286cc8a10848489165c59d15184ae7/input/code/similar_questions_script.py",
+                                        "LocalPath": "/opt/ml/processing/input/code",
+                                        "S3DataType": "S3Prefix",
+                                        "S3InputMode": "File",
+                                        "S3DataDistributionType": "FullyReplicated",
+                                        "S3CompressionType": "None"
+                                    }
+                                }
+                            ],
+                            "ProcessingOutputConfig": {
+                                "Outputs": [
+                                    {
+                                        "OutputName": "similar_questions_mapping",
+                                        "AppManaged": false,
+                                        "S3Output": {
+                                            "S3Uri": {
+                                                "Get": "Parameters.OutputData"
+                                            },
+                                            "LocalPath": "/opt/ml/processing/output",
+                                            "S3UploadMode": "EndOfJob"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ],
+                "ElseSteps": []
+            }
+        }
+    ]
+}
