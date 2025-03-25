@@ -26,6 +26,11 @@ export class SagemakerConstructCDK extends constructs.Construct {
 
     let pipelineJSON = fs.readFileSync(path.join(__dirname, `../../assets/sagemaker/pipeline.json`), 'utf-8'); 
     pipelineJSON = pipelineJSON.replace(/\\/g, "");
+    // Replace the hardcoded role ARN with the new role ARN
+    pipelineJSON = pipelineJSON.replace(
+      'arn:aws:iam::123456789102:role/VoC-ModelsAlphaStage-VoC--SagemakerExecutionRole4EB-zqTMV6PAYRmN',
+      sagemakerRole.roleArn
+    );    
     const pipeline1 = new sagemaker.CfnPipeline(this, 'pipeline', {
       roleArn: sagemakerRole.roleArn,
       pipelineName: `pipeline-${props.stage}`,
