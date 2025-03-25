@@ -50,6 +50,40 @@ export class SagemakerConstructCDK extends constructs.Construct {
         arn: `arn:aws:sagemaker:${Stack.of(this).region}:${Stack.of(this).account}:pipeline/${pipeline1.pipelineName}`,
         roleArn: sagemakerScheduleRole.roleArn,
         sageMakerPipelineParameters: {
+          pipelineParameterList: [
+            {
+              name: "ProcessingInstanceType",
+              value: "ml.m5.xlarge"
+            },
+            {
+              name: "TrainingInstanceType",
+              value: "ml.m5.xlarge"
+            },
+            {
+              name: "TrainingInstanceCount",
+              value: "1"
+            },
+            {
+              name: "ModelApprovalStatus",
+              value: "Approved"
+            },
+            {
+              name: "DeployInstanceType",
+              value: "ml.m5.large"
+            },
+            {
+              name: "DeployInstanceCount",
+              value: "1"
+            },
+            {
+              name: "SkipModelBiasCheck",
+              value: "false"
+            },
+            {
+              name: "RegisterNewModelBiasBaseline",
+              value: "false"
+            }
+          ]
         },
       },
     });

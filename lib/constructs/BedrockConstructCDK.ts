@@ -40,6 +40,8 @@ export class BedrockConstructCDK extends constructs.Construct {
       name: `${props.applicationName}-${props.stage}-collection`.toLowerCase().substring(0, 30),
       type: 'VECTORSEARCH',
       description: `Managed by CDK. ${props.applicationName}`,
+      
+      
     });
     const key = new aws_kms.Key(this, 'OpenSearchEncryptionKey', {
       enableKeyRotation: true,
@@ -135,7 +137,7 @@ export class BedrockConstructCDK extends constructs.Construct {
     const CreateIndexFnLogs = new aws_logs.LogGroup(this, 'CreateIndexFnLogs', {
       logGroupName: `/aws/lambda/${props.applicationName}/CreateIndexFunction`.slice(0, 512),
       retention: aws_logs.RetentionDays.TEN_YEARS,
-      removalPolicy: RemovalPolicy.RETAIN_ON_UPDATE_OR_DELETE,
+      removalPolicy: RemovalPolicy.DESTROY,
       logGroupClass: aws_logs.LogGroupClass.STANDARD,
     });
     console.log(path);
